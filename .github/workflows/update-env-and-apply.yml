@@ -1,0 +1,56 @@
+name: Update .env and Apply Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: 'JSON configuration string'
+        required: true
+
+jobs:
+  update_and_apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Parse config and update .env file
+        run: |
+          echo '${{ github.event.inputs.config }}' | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' > infrastructure/.env
+
+      - name: Commit .env file
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/msathiyakeerthi/GCP-GENAI-Infra.git
+          git add infrastructure/.env
+          git commit -m "Update .env file from workflow dispatch" || echo "No changes to commit"
+          git push
+
+      - name: Load .env file
+        run: |
+          cd infrastructure
+          while IFS='=' read -r key value; do
+            if [[ ! -z "$key" && ! "$key" =~ ^# ]]; then
+              export "TF_VAR_${key}=${value}"
+            fi
+          done < .env
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: |
+          cd infrastructure
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd infrastructure
+          terraform apply -auto-approve
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
