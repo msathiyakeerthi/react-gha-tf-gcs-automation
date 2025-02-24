@@ -24,7 +24,7 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/msathiyakeerthi/GCP-GENAI-Infra.git
+          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/msathiyakeerthireact-gha-tf-gcs-automation.git
           git add infrastructure/.env
           git commit -m "Update .env file for GCS bucket creation" || echo "No changes to commit"
           git push
